@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gmail Dot Trick Generator with AI Suggestions</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #3b82f6;
+            animation: spin 1s ease infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+          -webkit-appearance: none; 
+          margin: 0; 
+        }
+        input[type=number] {
+          -moz-appearance: textfield;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-gray-300 flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-2xl bg-slate-800/60 backdrop-blur-sm border border-slate-700 rounded-2xl shadow-2xl shadow-blue-500/10 p-6 md:p-8">
+        <!-- Header -->
+        <div class="text-center mb-8 relative">
+            <h1 class="text-3xl md:text-4xl font-bold text-white">Gmail Dot Trick Generator</h1>
+            <p class="text-slate-400 mt-2">Generate unique aliases for your Gmail account with ease.</p>
+             <button id="historyBtn" class="absolute -top-2 -right-2 h-10 w-10 bg-slate-700 hover:bg-slate-600 text-slate-300 grid place-items-center rounded-full transition duration-200" title="View History">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M12 8v4l2 2"></path></svg>
+            </button>
+        </div>
+
+        <!-- Input Section -->
+        <div class="space-y-4">
+            <div class="relative">
+                 <input type="text" id="username" placeholder="your.username" class="pl-4 pr-28 py-3 w-full bg-slate-900/50 border border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition duration-200">
+                 <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 select-none">@gmail.com</span>
+            </div>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label for="aliasCountInput" class="block text-sm font-medium text-slate-400 mb-2">Quantity</label>
+                    <input type="number" id="aliasCountInput" value="100" min="1" class="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition duration-200">
+                </div>
+                <div>
+                    <label for="aliasOffsetInput" class="block text-sm font-medium text-slate-400 mb-2">Offset</label>
+                    <input type="number" id="aliasOffsetInput" value="0" min="0" class="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition duration-200">
+                </div>
+            </div>
+
+            <button id="generateBtn" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition duration-200 shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transform hover:-translate-y-0.5">
+                Generate Aliases
+            </button>
+        </div>
+        
+        <!-- Results Section -->
+        <div id="resultsContainer" class="hidden mt-8">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
+                <h2 class="text-2xl font-semibold text-white">Generated Aliases</h2>
+                <div class="flex items-center gap-4">
+                    <span id="aliasCount" class="text-sm sm:text-base font-medium text-blue-400"></span>
+                    <button id="copyAllBtn" class="bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold py-2 px-4 rounded-lg transition duration-200 text-sm">Copy All</button>
+                </div>
+            </div>
+            <div id="aliases" class="max-h-64 overflow-y-auto bg-slate-900/70 p-4 rounded-lg border border-slate-700 space-y-2"></div>
+            <div id="copyNotification" class="mt-2 text-sm text-green-400 opacity-0 transition-opacity duration-300">Copied to clipboard!</div>
+            
+            <div class="mt-6 text-center">
+                 <button id="geminiBtn" class="bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 px-6 rounded-lg transition duration-200 shadow-md">
+                    ✨ Suggest Use Cases with AI
+                </button>
+            </div>
+            <div id="geminiResult" class="hidden mt-6 p-5 bg-slate-900/70 rounded-lg border border-slate-700">
+                <div id="geminiLoader" class="flex justify-center items-center"><div class="spinner"></div></div>
+                <div id="geminiContent" class="prose prose-sm prose-invert max-w-none"></div>
+            </div>
+        </div>
+        
+        <!-- Developer Footer -->
+        <footer class="text-center mt-10 pt-6 border-t border-slate-700">
+            <p class="text-slate-400 text-sm">Developed by Badiuzzaman Majnu</p>
+            <p class="text-slate-500 text-xs mt-1">Professional Graphics Designer, Developer, Freelancer.</p>
+            <div class="flex justify-center items-center gap-4 mt-3">
+                <a href="https://wa.me/8801796072129" target="_blank" class="text-slate-400 hover:text-green-400 transition-colors" title="WhatsApp">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.894 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.886-.001 2.269.654 4.288 1.91 5.918l-1.226 4.485 4.535-1.182z"/></svg>
+                </a>
+                <a href="https://www.facebook.com/bmajnu786" target="_blank" class="text-slate-400 hover:text-blue-500 transition-colors" title="Facebook">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v2.385z"/></svg>
+                </a>
+                <a href="mailto:badiuzzamanmajnu786@gmail.com" class="text-slate-400 hover:text-red-400 transition-colors" title="Email">
+                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                </a>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // ... (JavaScript code remains the same, omitted for brevity) ...
+        const HISTORY_KEY = 'gmailAliasGeneratorHistory';
+        const LAST_USED_KEY = 'gmailAliasGeneratorLastUsed';
+
+        const usernameInput = document.getElementById('username');
+        const generateBtn = document.getElementById('generateBtn');
+        const aliasCountInput = document.getElementById('aliasCountInput');
+        const aliasOffsetInput = document.getElementById('aliasOffsetInput');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const aliasesDiv = document.getElementById('aliases');
+        const aliasCountSpan = document.getElementById('aliasCount');
+        const copyAllBtn = document.getElementById('copyAllBtn');
+        const copyNotification = document.getElementById('copyNotification');
+        const geminiBtn = document.getElementById('geminiBtn');
+        const geminiResultDiv = document.getElementById('geminiResult');
+        const geminiLoader = document.getElementById('geminiLoader');
+        const geminiContent = document.getElementById('geminiContent');
+        const historyBtn = document.getElementById('historyBtn');
+
+        let generatedAliasesList = [];
+
+        document.addEventListener('DOMContentLoaded', loadLastUsedSettings);
+        generateBtn.addEventListener('click', handleGenerateClick);
+        historyBtn.addEventListener('click', showHistoryModal);
+        geminiBtn.addEventListener('click', handleGeminiClick);
+        usernameInput.addEventListener('keyup', (event) => { if (event.key === 'Enter') generateBtn.click(); });
+
+        async function handleGenerateClick() {
+            const username = usernameInput.value.trim().replace(/\./g, '');
+            if (!username) {
+                showModal('Please enter a username.');
+                return;
+            }
+
+            let count = parseInt(aliasCountInput.value, 10) || 100;
+            let offset = parseInt(aliasOffsetInput.value, 10) || 0;
+            if (count < 1) count = 1;
+            if (offset < 0) offset = 0;
+            
+            if (count > 50000) {
+                const proceed = await showConfirmationModal(`Warning: Generating ${count.toLocaleString()} aliases may be slow. Continue?`);
+                if (!proceed) return;
+            }
+            
+            saveHistory({ username, count, offset, timestamp: new Date().toISOString() });
+            aliasesDiv.innerHTML = '';
+            geminiResultDiv.classList.add('hidden');
+            geminiContent.innerHTML = '';
+            
+            generatedAliasesList = generateDotCombinations(username, count, offset);
+            
+            if (generatedAliasesList.length === 0 && offset > 0) {
+                 showModal(`No more combinations to generate for this username.`);
+                 resultsContainer.classList.add('hidden');
+                 return;
+            }
+
+            renderAliases(generatedAliasesList);
+            updateAliasCount();
+            resultsContainer.classList.remove('hidden');
+            resultsContainer.classList.add('fade-in');
+        }
+
+        function renderAliases(aliases) {
+            aliasesDiv.innerHTML = '';
+            aliases.forEach(alias => {
+                const aliasEl = document.createElement('div');
+                aliasEl.className = 'flex justify-between items-center p-3 bg-slate-800/50 rounded-md group';
+                aliasEl.innerHTML = `
+                    <span class="text-slate-300 flex-grow mr-2 truncate">${alias}@gmail.com</span>
+                    <button class="copy-btn bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-1 text-xs font-semibold rounded-full transition-colors">Copy</button>
+                    <button class="delete-alias-btn text-slate-500 hover:text-red-400 ml-2 h-7 w-7 grid place-items-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity" title="Remove alias">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                `;
+                aliasesDiv.appendChild(aliasEl);
+            });
+            attachCopyListeners();
+            attachDeleteAliasListeners();
+        }
+
+        function updateAliasCount() {
+            const username = usernameInput.value.trim().replace(/\./g, '');
+            if (!username) return;
+            const totalCombinations = username.length > 1 ? Math.pow(2, username.length - 1) : 1;
+            aliasCountSpan.textContent = `Showing ${generatedAliasesList.length} of ${totalCombinations.toLocaleString()}`;
+        }
+
+        async function handleGeminiClick() {
+            if (generatedAliasesList.length === 0) {
+                showModal("Please generate some aliases first.");
+                return;
+            }
+            geminiResultDiv.classList.remove('hidden');
+            geminiLoader.style.display = 'flex';
+            geminiContent.innerHTML = '';
+            
+            const exampleAlias = generatedAliasesList[0] + '@gmail.com';
+            const prompt = `I have generated multiple Gmail aliases like "${exampleAlias}". Provide a creative list of use cases for these aliases. For each, give a brief explanation. Format as a markdown bulleted list. Focus on organization, privacy, and tracking.`;
+
+            try {
+                const apiKey = ""; // Leave empty
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                
+                if (!response.ok) throw new Error(`API request failed: ${response.status}`);
+                const result = await response.json();
+
+                if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts[0]) {
+                    const text = result.candidates[0].content.parts[0].text;
+                    let htmlContent = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/<\/?[^>]+(>|$)/g, "");
+                    const listItems = htmlContent.split(/\n\s*[\-\*]\s/).filter(item => item.trim() !== '');
+                    if (listItems.length > 1) htmlContent = '<ul>' + listItems.map(item => `<li class="pl-2">${item}</li>`).join('') + '</ul>';
+                    geminiContent.innerHTML = htmlContent;
+                } else { throw new Error('Unexpected API response structure.'); }
+            } catch (error) {
+                console.error("Gemini API Error:", error);
+                geminiContent.innerHTML = `<p class="text-red-400">Sorry, an error occurred while getting suggestions.</p>`;
+            } finally {
+                geminiLoader.style.display = 'none';
+            }
+        }
+        
+        function generateDotCombinations(str, limit, offset) {
+            if (!str) return [];
+            if (str.length <= 1) return offset === 0 ? [str] : [];
+            const results = [];
+            const n = str.length;
+            const totalCombinations = Math.pow(2, n - 1);
+            const end = Math.min(offset + limit, totalCombinations);
+            if (offset >= totalCombinations) return [];
+            for (let i = offset; i < end; i++) {
+                let newStr = str[0];
+                for (let j = 0; j < n - 1; j++) {
+                    if ((i >> j) & 1) newStr += '.';
+                    newStr += str[j + 1];
+                }
+                results.push(newStr);
+            }
+            return results;
+        }
+
+        function loadLastUsedSettings() {
+            const lastUsed = JSON.parse(localStorage.getItem(LAST_USED_KEY));
+            if (lastUsed) {
+                usernameInput.value = lastUsed.username || '';
+                aliasCountInput.value = lastUsed.count || 100;
+                aliasOffsetInput.value = lastUsed.offset || 0;
+            }
+        }
+        
+        function saveHistory(entry) {
+             let history = JSON.parse(localStorage.getItem(HISTORY_KEY)) || [];
+            history.unshift(entry);
+            if (history.length > 50) history = history.slice(0, 50);
+            localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+            localStorage.setItem(LAST_USED_KEY, JSON.stringify(entry));
+        }
+
+        function showHistoryModal() {
+            const history = JSON.parse(localStorage.getItem(HISTORY_KEY)) || [];
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50 fade-in';
+            
+            let historyItemsHtml = history.length > 0 
+                ? history.map((entry, index) => `
+                    <li class="group p-4 pr-12 relative hover:bg-slate-700 rounded-lg transition-colors" data-entry='${JSON.stringify(entry)}' data-index="${index}">
+                        <div class="cursor-pointer history-item-content">
+                            <p class="font-semibold text-slate-200">Username: ${entry.username}</p>
+                            <p class="text-sm text-slate-400">Generated ${entry.count} from #${entry.offset}</p>
+                            <p class="text-xs text-slate-500 mt-1">${new Date(entry.timestamp).toLocaleString()}</p>
+                        </div>
+                        <button class="delete-history-btn absolute top-1/2 right-4 -translate-y-1/2 h-8 w-8 grid place-items-center rounded-full text-slate-500 hover:bg-red-500/20 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity" title="Delete Entry">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        </button>
+                    </li>`).join('')
+                : '<p class="text-center text-slate-400 p-4">No history yet.</p>';
+
+            modal.innerHTML = `
+                <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-2xl w-full max-w-md">
+                    <div class="p-4 border-b border-slate-700 flex justify-between items-center">
+                        <h3 class="text-xl font-semibold text-white">Generation History</h3>
+                        <button id="closeHistoryModal" class="text-2xl text-slate-400 hover:text-white">&times;</button>
+                    </div>
+                    <ul class="max-h-96 overflow-y-auto p-2">${historyItemsHtml}</ul>
+                    ${history.length > 0 ? `<div class="p-3 border-t border-slate-700 text-center"><button id="clearHistoryBtn" class="text-sm text-red-500 hover:underline">Clear All History</button></div>` : ''}
+                </div>`;
+
+            document.body.appendChild(modal);
+
+            modal.querySelector('#closeHistoryModal').addEventListener('click', () => modal.remove());
+            modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+
+            modal.querySelectorAll('li').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    if (e.target.closest('.delete-history-btn')) {
+                        e.stopPropagation();
+                        const indexToDelete = parseInt(item.dataset.index, 10);
+                        showConfirmationModal('Delete this history entry?', 'Delete', 'bg-red-600').then(confirmed => {
+                            if (confirmed) {
+                                history.splice(indexToDelete, 1);
+                                localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+                                modal.remove();
+                                showHistoryModal();
+                            }
+                        });
+                    } else if (e.target.closest('.history-item-content')) {
+                        const entry = JSON.parse(item.dataset.entry);
+                        usernameInput.value = entry.username;
+                        aliasCountInput.value = entry.count;
+                        aliasOffsetInput.value = entry.offset;
+                        modal.remove();
+                    }
+                });
+            });
+            
+            if (history.length > 0) {
+                 modal.querySelector('#clearHistoryBtn').addEventListener('click', () => {
+                     showConfirmationModal('Clear all history? This cannot be undone.', 'Clear All', 'bg-red-600').then(confirmed => {
+                         if (confirmed) {
+                             localStorage.removeItem(HISTORY_KEY);
+                             modal.remove();
+                             showHistoryModal();
+                         }
+                     });
+                 });
+            }
+        }
+        
+        function attachDeleteAliasListeners() {
+            document.querySelectorAll('.delete-alias-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const aliasEl = e.currentTarget.parentElement;
+                    const aliasText = aliasEl.querySelector('span').textContent.split('@')[0];
+                    aliasEl.remove();
+                    const indexToRemove = generatedAliasesList.indexOf(aliasText);
+                    if (indexToRemove > -1) {
+                        generatedAliasesList.splice(indexToRemove, 1);
+                    }
+                    updateAliasCount();
+                });
+            });
+        }
+
+        function attachCopyListeners() {
+             document.querySelectorAll('.copy-btn').forEach(button => {
+                button.addEventListener('click', (e) => copyToClipboard(e.currentTarget.parentElement.querySelector('span').textContent, e.currentTarget));
+            });
+            copyAllBtn.addEventListener('click', () => {
+                const allEmails = generatedAliasesList.map(alias => `${alias}@gmail.com`).join('\n');
+                copyToClipboard(allEmails, copyAllBtn);
+            });
+        }
+        
+        function copyToClipboard(text, button) {
+             const originalText = button.textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                button.textContent = 'Copied!';
+                showCopyNotification();
+                setTimeout(() => { button.textContent = originalText; }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+                showModal('Failed to copy text.');
+            });
+        }
+
+        function showCopyNotification() {
+            copyNotification.style.opacity = '1';
+            setTimeout(() => { copyNotification.style.opacity = '0'; }, 2000);
+        }
+        
+        function showModal(message) {
+            const modal = document.createElement('div');
+             modal.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50 fade-in';
+             modal.innerHTML = `<div class="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-6 w-full max-w-sm text-center"><p class="text-slate-200 mb-4">${message}</p><button class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 w-full">OK</button></div>`;
+             modal.querySelector('button').addEventListener('click', () => modal.remove());
+             document.body.appendChild(modal);
+        }
+
+        function showConfirmationModal(message, confirmText = 'Confirm', confirmClass = 'bg-blue-600') {
+            return new Promise((resolve) => {
+                const modal = document.createElement('div');
+                modal.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50 fade-in';
+                modal.innerHTML = `
+                    <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-6 w-full max-w-sm text-center">
+                        <p class="text-slate-200 mb-6">${message}</p>
+                        <div class="flex justify-center gap-4">
+                            <button id="modalCancel" class="px-4 py-2 bg-slate-600 rounded-lg hover:bg-slate-500 w-1/2">Cancel</button>
+                            <button id="modalConfirm" class="px-4 py-2 text-white rounded-lg w-1/2 ${confirmClass}">${confirmText}</button>
+                        </div>
+                    </div>`;
+                modal.querySelector('#modalConfirm').addEventListener('click', () => { modal.remove(); resolve(true); });
+                modal.querySelector('#modalCancel').addEventListener('click', () => { modal.remove(); resolve(false); });
+                document.body.appendChild(modal);
+            });
+        }
+    </script>
+</body>
+</html>
