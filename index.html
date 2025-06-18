@@ -139,7 +139,7 @@
     <script>
         const HISTORY_KEY = 'gmailAliasGeneratorHistory';
         const LAST_USED_KEY = 'gmailAliasGeneratorLastUsed';
-        const CURRENT_ALIASES_KEY = 'gmailAliasGeneratorCurrentAliases';
+        const CURRENT_ALIASES_KEY = 'gmailAliasGeneratorAliasMap';
 
         const usernameInput = document.getElementById('username');
         const generateBtn = document.getElementById('generateBtn');
@@ -162,6 +162,7 @@
         
         let generatedAliasesList = [];
         let currentMode = 'dot'; // 'dot' or 'plus'
+        let currentHistoryId = null; // unique id for this generation session
 
         // --- Event Listeners ---
         document.addEventListener('DOMContentLoaded', () => {
@@ -206,7 +207,8 @@
             aliasesDiv.innerHTML = '';
             resultsContainer.classList.add('hidden');
 
-            let historyEntry = { username, timestamp: new Date().toISOString(), mode: currentMode };
+            currentHistoryId = Date.now();
+            let historyEntry = { id: currentHistoryId, username, timestamp: new Date().toISOString(), mode: currentMode };
 
             if (currentMode === 'dot') {
                 let count = parseInt(aliasCountInput.value, 10) || 100;
@@ -438,7 +440,12 @@
             // Restore basic inputs
             usernameInput.value = entry.username || '';
 
-            if (entry.mode === 'plus') {
+            currentHistoryId = entry.id || Date.now();
+            const aliasMap = getAliasMap();
+            if(aliasMap[currentHistoryId]){
+                generatedAliasesList = aliasMap[currentHistoryId];
+                if(entry.mode==='plus') switchMode('plus'); else switchMode('dot');
+            } else if (entry.mode === 'plus') {
                 switchMode('plus');
                 if (entry.tags) {
                     plusTagsInput.value = entry.tags;
@@ -462,6 +469,7 @@
             updateAliasCount();
             resultsContainer.classList.remove('hidden');
             resultsContainer.classList.add('fade-in');
+            saveCurrentAliases();
         }
 
         // Attach listener once for Copy All
@@ -523,14 +531,27 @@
             });
         }
 
+        function getAliasMap(){
+            return JSON.parse(localStorage.getItem(CURRENT_ALIASES_KEY) || '{}');
+        }
+
+        function saveAliasMap(map){
+            localStorage.setItem(CURRENT_ALIASES_KEY, JSON.stringify(map));
+        }
+
         function saveCurrentAliases(){
-            localStorage.setItem(CURRENT_ALIASES_KEY, JSON.stringify(generatedAliasesList));
+            if(!currentHistoryId) return;
+            const map = getAliasMap();
+            map[currentHistoryId] = generatedAliasesList;
+            saveAliasMap(map);
         }
 
         function loadCurrentAliases(){
-            const stored = JSON.parse(localStorage.getItem(CURRENT_ALIASES_KEY) || '[]');
-            if(stored.length){
-                generatedAliasesList = stored;
+            const lastUsed = JSON.parse(localStorage.getItem(LAST_USED_KEY)||'null');
+            const map = getAliasMap();
+            if(lastUsed && map[lastUsed.id]){
+                currentHistoryId = lastUsed.id;
+                generatedAliasesList = map[lastUsed.id];
                 renderAliases(generatedAliasesList);
                 updateAliasCount();
                 resultsContainer.classList.remove('hidden');
