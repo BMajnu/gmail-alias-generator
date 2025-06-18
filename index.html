@@ -139,6 +139,7 @@
     <script>
         const HISTORY_KEY = 'gmailAliasGeneratorHistory';
         const LAST_USED_KEY = 'gmailAliasGeneratorLastUsed';
+        const CURRENT_ALIASES_KEY = 'gmailAliasGeneratorCurrentAliases';
 
         const usernameInput = document.getElementById('username');
         const generateBtn = document.getElementById('generateBtn');
@@ -166,6 +167,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             loadLastUsedSettings();
             populateUsernameSuggestions();
+            loadCurrentAliases();
         });
         generateBtn.addEventListener('click', handleGenerateClick);
         historyBtn.addEventListener('click', showHistoryModal);
@@ -247,6 +249,7 @@
             resultsContainer.classList.remove('hidden');
             resultsContainer.classList.add('fade-in');
             populateUsernameSuggestions();
+            saveCurrentAliases();
         }
 
         function renderAliases(aliases) {
@@ -265,6 +268,7 @@
             });
             attachCopyListeners();
             attachDeleteAliasListeners();
+            saveCurrentAliases();
         }
 
         function updateAliasCount() {
@@ -276,6 +280,7 @@
             } else {
                  aliasCountSpan.textContent = `Showing ${generatedAliasesList.length} aliases`;
             }
+            saveCurrentAliases();
         }
 
         function generatePlusAliases(username, tags) {
@@ -516,6 +521,20 @@
                 modal.querySelector('#modalCancel').addEventListener('click', () => { modal.remove(); resolve(false); });
                 document.body.appendChild(modal);
             });
+        }
+
+        function saveCurrentAliases(){
+            localStorage.setItem(CURRENT_ALIASES_KEY, JSON.stringify(generatedAliasesList));
+        }
+
+        function loadCurrentAliases(){
+            const stored = JSON.parse(localStorage.getItem(CURRENT_ALIASES_KEY) || '[]');
+            if(stored.length){
+                generatedAliasesList = stored;
+                renderAliases(generatedAliasesList);
+                updateAliasCount();
+                resultsContainer.classList.remove('hidden');
+            }
         }
 
     </script>
