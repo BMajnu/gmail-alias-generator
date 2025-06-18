@@ -544,6 +544,17 @@
             const map = getAliasMap();
             map[currentHistoryId] = generatedAliasesList;
             saveAliasMap(map);
+
+            // update history metadata count for this id (dot mode or numeric plus mode)
+            let history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+            const idx = history.findIndex(h => h.id === currentHistoryId);
+            if(idx > -1){
+                if(history[idx].mode === 'dot' || (history[idx].mode==='plus' && !history[idx].tags)){
+                    history[idx].count = generatedAliasesList.length;
+                }
+                localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+                localStorage.setItem(LAST_USED_KEY, JSON.stringify(history[idx]));
+            }
         }
 
         function loadCurrentAliases(){
